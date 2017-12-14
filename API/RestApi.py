@@ -7,7 +7,7 @@ class RestAPI:
         'base': None
     }
 
-    def __init__(self, url: str, key: str, secret: str):
+    def __init__(self, key: str, secret: str, url: str = 'https://api.hitbtc.com/api/2'):
         try:
             self.session = requests.session()
             self.session.auth = (key, secret)
@@ -181,16 +181,21 @@ class RestAPI:
             params['from'] = params['from_type']
             del params['from_type']
 
-        for key in params.keys():
-            if params[key] is None:
-                del params[key]
+        data = {}
 
-        if method in self.session:
+        for key in params.keys():
+            if params[key] is not None:
+                data[key] = params[key]
+
+        if hasattr(self.session, method):
             try:
-                data = params
                 del data['path']
                 del data['endpoint']
-                r = getattr(method, self.session)("$(self.url['base'])/$(params['path']}/$(params['endpoint'])", data).json()
+                print("%s%s%s" % (self.url['base'], params['path'], params['endpoint']))
+                try:
+                    r = getattr(self.session, method)(url="%s%s%s" % (self.url['base'], params['path'], params['endpoint']), data=data).json()
+                except Exception as e:
+                    raise
                 if 'error' in r:
                     raise Exception('API Error: %s' % r)
                 return r
