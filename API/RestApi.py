@@ -1,3 +1,5 @@
+from pprint import pformat
+
 import requests
 
 
@@ -84,11 +86,12 @@ class RestAPI:
         return self.get(locals())
 
     # Trading API Methods
-    def get_all_orders_for_symbol(self, symbol: str) -> dict:
-        path = '/order'
-        if symbol is None:
-            raise Exception('Argument symbol must be specified')
 
+    def get_all_orders(self) -> dict:
+        return self.get_order_book_for_symbol()
+
+    def get_all_orders_for_symbol(self, symbol: str = None) -> dict:
+        path = '/order'
         return self.get(locals())
 
     def post_order_for_symbol(self, symbol: str, side: str, quantity: str, clientOrderId: str = None, type: str = None, timeInForce: str = None, price: str = None,
@@ -143,7 +146,7 @@ class RestAPI:
 
         return self.patch(locals())
 
-    def get_trading_balance(self) -> dict:
+    def get_trading_balance(self) -> list:
         path = '/trading/balance'
         return self.get(locals())
 
@@ -156,6 +159,20 @@ class RestAPI:
         return self.get(locals())
 
     # Trading History API Methods
+
+    # Account API Methods
+    def get_account_balance(self):
+        path = '/account/balance'
+        return self.get(locals())
+
+    def get_account_transactions(self, transaction_id: str = None) -> dict:
+        path = '/account/transactions'
+        if transaction_id is not None:
+            path += '/%s' % transaction_id
+        return self.get(locals())
+
+    def get_account_transaction_by_id(self, transaction_id) -> dict:
+        return self.get_account_transactions(transaction_id)
 
 
     # API Helper Methods
@@ -175,8 +192,8 @@ class RestAPI:
         return self.__call('delete', params)
 
     def __call(self, method: str, params: dict) -> dict:
-        if 'data' not in params:
-            params['data'] = {}
+        if 'endpoint' not in params:
+            params['endpoint'] = ''
         if 'from_type' in params:
             params['from'] = params['from_type']
             del params['from_type']
@@ -184,16 +201,15 @@ class RestAPI:
         data = {}
 
         for key in params.keys():
-            if params[key] is not None:
+            if params[key] is not None and key not in ['path', 'endpoint', 'self']:
                 data[key] = params[key]
 
         if hasattr(self.session, method):
             try:
-                del data['path']
-                del data['endpoint']
                 print("%s%s%s" % (self.url['base'], params['path'], params['endpoint']))
+                print('data=%s' % pformat(data))
                 try:
-                    r = getattr(self.session, method)(url="%s%s%s" % (self.url['base'], params['path'], params['endpoint']), data=data).json()
+                    r = getattr(self.session, method)(url="%s%s%s" % (self.url['base'], params['path'], params['endpoint']), params=data).json()
                 except Exception as e:
                     raise
                 if 'error' in r:
